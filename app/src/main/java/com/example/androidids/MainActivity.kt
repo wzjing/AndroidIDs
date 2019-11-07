@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
             IMEI0       : ${DeviceUtils.getIMEI(this)}
             IMEI1       : ${DeviceUtils.getIMEI(this, 1)}
             MEID        : ${DeviceUtils.getMEID(this, 0)}
+            UUID        : ${DeviceUtils.getUniqueId()}
         """.trimIndent()
 
         DeviceUtils.getOAID(this) {

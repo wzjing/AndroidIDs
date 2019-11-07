@@ -15,18 +15,26 @@ import com.bun.miitmdid.core.ErrorCode;
 import com.bun.miitmdid.core.MdidSdkHelper;
 
 import java.lang.reflect.Method;
+import java.util.UUID;
 
 public class DeviceUtils {
+
+    static {
+        System.loadLibrary("ids");
+    }
+
     public static final String TAG = "DeviceUtils";
+
     /**
      * 获取设备的OAID，此方法将异步返回结果
-     * @param context	Android Context
-     * @param callback	结果回掉
-     * @return			回掉方法的注册状态
+     *
+     * @param context  Android Context
+     * @param callback 结果回掉
+     * @return 回掉方法的注册状态
      */
     @Nullable
     public static void getOAID(Context context, OaidCallback callback) {
-        int status = MdidSdkHelper.InitSdk(context, true, (isSupport, supplier)->{
+        int status = MdidSdkHelper.InitSdk(context, true, (isSupport, supplier) -> {
             Logger.d(TAG, "getOAID :: callback : " + isSupport);
             if (callback != null) {
                 callback.onReceiveOaid(isSupport ? supplier.getOAID() : "");
@@ -65,8 +73,9 @@ public class DeviceUtils {
 
     /**
      * 默认返回第一个卡槽的IMEI
-     * @param context	Android Context
-     * @return			返回第一个卡槽的IMEI，如果没有返回null
+     *
+     * @param context Android Context
+     * @return 返回第一个卡槽的IMEI，如果没有返回null
      */
     @NonNull
     public static String getIMEI(Context context) {
@@ -75,9 +84,10 @@ public class DeviceUtils {
 
     /**
      * 获取手机对应卡槽的IMEI
-     * @param context	Android Context
-     * @param slotId 	卡槽的位置，0表示卡1，1表示卡2
-     * @return			返回对应卡槽的IMEI，如果没有返回null
+     *
+     * @param context Android Context
+     * @param slotId  卡槽的位置，0表示卡1，1表示卡2
+     * @return 返回对应卡槽的IMEI，如果没有返回null
      */
     @NonNull
     public static String getIMEI(Context context, int slotId) {
@@ -131,9 +141,10 @@ public class DeviceUtils {
 
     /**
      * 获取手机的MEID
-     * @param context   Android Context
-     * @param slotId    卡槽的位置，目前仅能够测试卡槽1的MEID（绝大多数手机都最多有一个MEID）
-     * @return          返回MEID，如果未能获取，则返回null
+     *
+     * @param context Android Context
+     * @param slotId  卡槽的位置，目前仅能够测试卡槽1的MEID（绝大多数手机都最多有一个MEID）
+     * @return 返回MEID，如果未能获取，则返回null
      */
     @NonNull
     public static String getMEID(Context context, int slotId) {
@@ -181,13 +192,14 @@ public class DeviceUtils {
 
     /**
      * 通过反射的方式去获取MEID，此方法可能无法在某些手机上获取到反射方法，建议用作备用方法
-     * @return  返回MEID，如果未能获取，则返回null
+     *
+     * @return 返回MEID，如果未能获取，则返回null
      */
     @Nullable
     public static String getMeidFromReflection() {
         Logger.d(TAG, "call reflection method");
         try {
-            Class<?> clazz = Class.forName("android.os.SystemProperties");
+            Class clazz = Class.forName("android.os.SystemProperties");
             Method method = clazz.getMethod("get", String.class, String.class);
             return (String) method.invoke(null, "ril.cdma.meid", "");
         } catch (Exception e) {
@@ -201,4 +213,20 @@ public class DeviceUtils {
     public interface OaidCallback {
         void onReceiveOaid(String oaid);
     }
+
+    @NonNull
+    public static String getUniqueId() {
+        Logger.d(TAG, "getUniqueId()");
+        try {
+//            UUID.fromString(Build.BOARD + Build.DISPLAY + Build.BRAND + Build.HOST + Build.HARDWARE);
+//            return "null";
+            return getCpuId();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return "empty";
+    }
+
+    public static native String getCpuId();
 }
