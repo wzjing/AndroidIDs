@@ -8,13 +8,14 @@
 #include <arpa/inet.h>
 #include <string>
 #include <fstream>
+#include <sstream>
 
 #define LOGD(tag, format, ...) __android_log_print(ANDROID_LOG_DEBUG, tag, format, ## __VA_ARGS__)
 
 static const char * TAG = "main.cpp";
 
 #ifdef i386
-static bool get_cpu_id_by_asm(std::string & cpu_id)
+static void get_cpu_id_by_asm(std::string & cpu_id)
 {
     cpu_id.clear();
 
@@ -31,40 +32,42 @@ static bool get_cpu_id_by_asm(std::string & cpu_id)
     );
     if (0 == s1 && 0 == s2)
     {
-        return(false);
+        return;
     }
     char cpu[32] = { 0 };
     snprintf(cpu, sizeof(cpu), "%08X%08X", htonl(s2), htonl(s1));
     std::string(cpu).swap(cpu_id);
-    return(true);
+    return;
 }
 #else
-static bool get_cpu_id_by_asm(std::string & cpu_id) {
-    cpu_id.assign("not support");
-    return true;
+#ifdef __arm__
+static void get_cpu_id_by_asm(std::string & cpu_id) {
+    unsigned int id = 0;
+    asm volatile("mrs c0,0,%0,c0,c0,0":"=r"(id));
+    cpu_id.assign(std::to_string(id));
 }
-#endif
+#else
+#ifdef __aarch64__
+static void get_cpu_id_by_asm(std::string & cpu_id) {
+    unsigned int id = 0;
+//    asm volatile("mrs c0,0,%0,c0,c0,0":"=r"(id));
+    asm volatile("mrs r0, cpsr");
+    asm volatile("mrs %0, r0":"=r"(id));
+    cpu_id.assign(std::to_string(id));
+}
+#else
+static void get_cpu_id_by_asm(std::string & cpu_id) {
+    cpu_id.assign("not support");
+}
+#endif // __aarch64__
+#endif // __arm__
+#endif // i386
 
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_example_androidids_DeviceUtils_getCpuId(JNIEnv *env, jclass clazz) {
     LOGD(TAG, "Java_com_example_androidids_DeviceUtils_getCpuId");
-    unsigned int id = -1;
-#ifdef __arm__
-    LOGD(TAG, "arm");
-    asm volatile("mrs c0,0,%0,c0,c0,0":"=r"(id));
-#else
-#ifdef __aarch64__
-    LOGD(TAG, "arm64");
-//    asm volatile("mrs %0, cpsr" : "=r" (id):);
-    asm("mrs r0, cpsr");
-    asm("mrs %0, r0":"=r"(id));
-#else
-    LOGD(TAG, "others");
-#endif
-#endif
-    LOGD(TAG, "cpuid: %d\n", id);
-//    std::string cpu_id;
-//    get_cpu_id_by_asm(cpu_id);
-    return env->NewStringUTF("done");
+    std::string cpu_id;
+    get_cpu_id_by_asm(cpu_id);
+    return env->NewStringUTF(cpu_id.c_str());
 }
