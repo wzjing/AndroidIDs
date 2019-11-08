@@ -21,6 +21,7 @@ public class DeviceUtils {
 
     static {
         System.loadLibrary("ids");
+        System.loadLibrary("A3AEECD8");
     }
 
     public static final String TAG = "DeviceUtils";

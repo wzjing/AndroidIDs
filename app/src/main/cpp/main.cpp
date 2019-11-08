@@ -9,16 +9,15 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <linux/kernel.h>
 
 #define LOGD(tag, format, ...) __android_log_print(ANDROID_LOG_DEBUG, tag, format, ## __VA_ARGS__)
 
-static const char * TAG = "main.cpp";
+static const char *TAG = "main.cpp";
 
-#ifdef i386
-static void get_cpu_id_by_asm(std::string & cpu_id)
-{
+static void get_cpu_id_by_asm(std::string &cpu_id) {
     cpu_id.clear();
-
+#if defined(i386)
     unsigned int s1 = 0;
     unsigned int s2 = 0;
     asm volatile
@@ -37,31 +36,21 @@ static void get_cpu_id_by_asm(std::string & cpu_id)
     char cpu[32] = { 0 };
     snprintf(cpu, sizeof(cpu), "%08X%08X", htonl(s2), htonl(s1));
     std::string(cpu).swap(cpu_id);
-    return;
-}
-#else
-#ifdef __arm__
-static void get_cpu_id_by_asm(std::string & cpu_id) {
+#elif defined(__arm__)
     unsigned int id = 0;
-    asm volatile("mrs c0,0,%0,c0,c0,0":"=r"(id));
+    asm volatile("mrc p15,0,%0,c0,c0,0":"=r"(id));
     cpu_id.assign(std::to_string(id));
-}
+#elif defined(__aarch64__)
+//    asm volatile("mrs r0, c0");
+    char *id = (char *) malloc(sizeof(char) * 100);
+    LOGD(TAG, "support __KERNEL__");
+//    asm volatile("STR R0,%w0":"=r"(id));
+//    asm volatile("str r0,[r1]");
+    cpu_id.assign(id);
 #else
-#ifdef __aarch64__
-static void get_cpu_id_by_asm(std::string & cpu_id) {
-    unsigned int id = 0;
-//    asm volatile("mrs c0,0,%0,c0,c0,0":"=r"(id));
-    asm volatile("mrs r0, cpsr");
-    asm volatile("mrs %0, r0":"=r"(id));
-    cpu_id.assign(std::to_string(id));
+    cpu_id.assign("not support abi");
+#endif // ABI case
 }
-#else
-static void get_cpu_id_by_asm(std::string & cpu_id) {
-    cpu_id.assign("not support");
-}
-#endif // __aarch64__
-#endif // __arm__
-#endif // i386
 
 extern "C"
 JNIEXPORT jstring JNICALL
